@@ -1,205 +1,218 @@
 package org.sangraama.asserts;
 
-import java.util.ArrayList;
-import java.util.Random;
-
+import org.java_websocket.WebSocket;
 import org.jbox2d.collision.shapes.CircleShape;
 import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.Body;
 import org.jbox2d.dynamics.BodyDef;
 import org.jbox2d.dynamics.BodyType;
 import org.jbox2d.dynamics.FixtureDef;
-import org.sangraama.controller.PlayerPassHandler;
-import org.sangraama.controller.WebSocketConnection;
-import org.sangraama.controller.clientprotocol.ClientTransferReq;
+import org.sangraama.controller.clientprotocol.ClientEvent;
 import org.sangraama.controller.clientprotocol.PlayerDelta;
 import org.sangraama.gameLogic.GameEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Player {
-    // Debug
-    // Local Debug or logs
-    private static boolean LL = true;
-    private static boolean LD = true;
-    public static final Logger log = LoggerFactory.getLogger(Player.class);
-    private static final String TAG = "player :";
+	// Debug
+	// Local Debug or logs
+	private static boolean LL = true;
+	private static boolean LD = true;
+	public static final Logger log = LoggerFactory.getLogger(Player.class);
+	private static final String TAG = "player :";
+	private long userID;
+	private BodyDef bodyDef;
+	private FixtureDef fixtureDef;
+	private Body body;
+	private GameEngine gameEngine;
+	private SangraamaMap sangraamaMap;
+	private ClientEvent clientEvent;
+	// WebSocket Connection
+	// private WebSocketConnection con;
+	private boolean isUpdate;
 
-    private long userID = 0;
+	// Player Dynamic Parameters
 
-    private BodyDef bodyDef = null;
-    private FixtureDef fixtureDef = null;
-    private Body body = null;
-    private GameEngine gameEngine = null;
-    private SangraamaMap sangraamaMap = null;
-    // WebSocket Connection
-    private WebSocketConnection con = null;
-    private boolean isUpdate = false;
+	private Vec2 v = new Vec2(0f, 0f);
+	private PlayerDelta delta;
 
-    // Player Dynamic Parameters
-    private float x, y;
-    public float v_x = 0, v_y = 0;
-    private Vec2 v = new Vec2(0f, 0f);
-    private PlayerDelta delta = null;
+	// Area of Interest
+	private float halfWidth = 10f;
+	private float halfHieght = 1000f;
+	private WebSocket webSocket;
 
-    // Area of Interest
-    private float halfWidth = 10f;
-    private float halfHieght = 1000f;
+	public WebSocket getWebSocket() {
+		return webSocket;
+	}
 
-    public boolean isUpdate() {
-        return this.isUpdate;
-    }
+	public void setWebSocket(WebSocket webSocket) {
+		this.webSocket = webSocket;
+	}
 
-    public Player(long userID, WebSocketConnection con) {
-        Random r = new Random();
-        this.createPlayer(userID, (float) r.nextInt(2) + 997f, (float) r.nextInt(999), con);
-    }
+	public boolean isUpdate() {
+		return this.isUpdate;
+	}
 
-    public Player(long userID, float x, float y, WebSocketConnection con) {
-        this.createPlayer(userID, x, y, con);
-    }
+	public Player(ClientEvent clientEvent, WebSocket webSocket) {
+		this.createPlayer(clientEvent, webSocket);
+	}
 
-    private void createPlayer(long userID, float x, float y, WebSocketConnection con) {
+	/*
+	 * public Player(long userID, float x, float y, WebSocketConnection con) {
+	 * // this.createPlayer(userID, x, y, con); }
+	 */
+	private void createPlayer(ClientEvent clientEvent, WebSocket webSocket) {
+		this.userID = clientEvent.getUserID();
+		this.clientEvent = clientEvent;
+		this.webSocket = webSocket;
+		this.bodyDef = this.createBodyDef();
+		this.fixtureDef = createFixtureDef();
+		this.gameEngine = GameEngine.INSTANCE;
+		this.gameEngine.addToPlayerQueue(this);
+		this.sangraamaMap = SangraamaMap.INSTANCE;
 
-        this.userID = userID;
-        this.x = x;
-        this.y = y;
-        this.con = con;
-        this.bodyDef = this.createBodyDef();
-        this.fixtureDef = createFixtureDef();
-        this.gameEngine = GameEngine.INSTANCE;
-        this.gameEngine.addToPlayerQueue(this);
-        this.sangraamaMap = SangraamaMap.INSTANCE;
+		// System.out.println(TAG + " init player x:" + x + " :" + y);
+	}
 
-        System.out.println(TAG + " init player x:" + x + " :" + y);
-    }
+	public PlayerDelta getPlayerDelta() {
+		// if (!isUpdate) {
+		/*
+		 * System.out.println(TAG + "id: " + this.userID + " x:" +
+		 * this.body.getPosition().x + " " + "y:" + this.body.getPosition().y);
+		 */
 
-    public PlayerDelta getPlayerDelta() {
-        // if (!isUpdate) {
-        System.out.println(TAG + "id: " + this.userID + " x:" + this.body.getPosition().x + " "
-                + "y:" + this.body.getPosition().y);
+		// this.delta = new PlayerDelta(this.body.getPosition().x - this.x,
+		// this.body.getPosition().y - this.y, this.userID);
+		this.delta = new PlayerDelta(this.body.getPosition().x,
+				this.body.getPosition().y, this.clientEvent.getUserID());
+		// this.x = this.body.getPosition().x;
+		// this.y = this.body.getPosition().y;
 
-        // this.delta = new PlayerDelta(this.body.getPosition().x - this.x,
-        // this.body.getPosition().y - this.y, this.userID);
-        this.delta = new PlayerDelta(this.body.getPosition().x, this.body.getPosition().y,
-                this.userID);
-        this.x = this.body.getPosition().x;
-        this.y = this.body.getPosition().y;
+		// Check whether player is inside the tile or not
+		/*
+		 * if (!this.isInsideMap(this.x, this.y)) {
+		 * PlayerPassHandler.INSTANCE.setPassPlayer(this); }
+		 */
 
-        // Check whether player is inside the tile or not
-        if (!this.isInsideMap(this.x, this.y)) {
-            PlayerPassHandler.INSTANCE.setPassPlayer(this);
-        }
+		// isUpdate = true;
+		// }
+		return this.delta;
+	}
 
-        // isUpdate = true;
-        // }
-        return this.delta;
-    }
+	/*
+	 * public void sendUpdate(List<PlayerDelta> deltaList) { if (this.con !=
+	 * null) { con.sendUpdate(deltaList); } }
+	 */
 
-    public void sendUpdate(ArrayList<PlayerDelta> deltaList) {
-        if (this.con != null) {
-            con.sendUpdate(deltaList);
-        }
-    }
+	public void applyUpdate() {
+		this.body.setLinearVelocity(this.getV());
+	}
 
-    public void applyUpdate() {
-        this.body.setLinearVelocity(this.getV());
-    }
+	private boolean isInsideMap(float x, float y) {
+		// System.out.println(TAG + "is inside "+x+":"+y);
+		if (0 <= x && x <= sangraamaMap.getMapWidth() && 0 <= y
+				&& y <= sangraamaMap.getMapHeight()) {
+			return true;
+		} else {
+			System.out.println(TAG + sangraamaMap.getMapWidth() + ":"
+					+ sangraamaMap.getMapHeight());
+			return false;
+		}
+	}
 
-    private boolean isInsideMap(float x, float y) {
-        // System.out.println(TAG + "is inside "+x+":"+y);
-        if (0 <= x && x <= sangraamaMap.getMapWidth() && 0 <= y && y <= sangraamaMap.getMapHeight()) {
-            return true;
-        } else {
-            System.out
-                    .println(TAG + sangraamaMap.getMapWidth() + ":" + sangraamaMap.getMapHeight());
-            return false;
-        }
-    }
+	/*
+	 * public void sendNewConnection(ClientTransferReq transferReq) {
+	 * con.sendNewConnection(transferReq); }
+	 */
 
-    public void sendNewConnection(ClientTransferReq transferReq) {
-        con.sendNewConnection(transferReq);
-    }
+	public BodyDef createBodyDef() {
+		BodyDef bd = new BodyDef();
+		/*
+		 * System.out.println(TAG + "create body def player x:" + this.x + " :"
+		 * + this.y);
+		 */
+		bd.position.set(this.clientEvent.getX(), this.clientEvent.getY());
+		bd.angle = clientEvent.getAngle();
+		bd.type = BodyType.DYNAMIC;
+		return bd;
+	}
 
-    public BodyDef createBodyDef() {
-        BodyDef bd = new BodyDef();
-        System.out.println(TAG + "create body def player x:" + this.x + " :" + this.y);
-        bd.position.set(this.x, this.y);
-        bd.type = BodyType.DYNAMIC;
-        return bd;
-    }
+	public BodyDef getBodyDef() {
+		return this.bodyDef;
+	}
 
-    public BodyDef getBodyDef() {
-        return this.bodyDef;
-    }
+	private FixtureDef createFixtureDef() {
+		CircleShape circle = new CircleShape();
+		circle.m_radius = 1f;
 
-    private FixtureDef createFixtureDef() {
-        CircleShape circle = new CircleShape();
-        circle.m_radius = 1f;
+		FixtureDef fd = new FixtureDef();
+		fd.density = 0.5f;
+		fd.shape = circle;
+		fd.friction = 0.2f;
+		fd.restitution = 0.5f;
+		return fd;
+	}
 
-        FixtureDef fd = new FixtureDef();
-        fd.density = 0.5f;
-        fd.shape = circle;
-        fd.friction = 0.2f;
-        fd.restitution = 0.5f;
-        return fd;
-    }
+	public FixtureDef getFixtureDef() {
+		return this.fixtureDef;
+	}
 
-    public FixtureDef getFixtureDef() {
-        return this.fixtureDef;
-    }
+	public void setBody(Body body) {
+		this.body = body;
+	}
 
-    public void setBody(Body body) {
-        this.body = body;
-    }
+	public Body getBody() {
+		return this.body;
+	}
 
-    public Body getBody() {
-        return this.body;
-    }
+	// public void setX(float x) {
+	// if (x > 0) {
+	// this.x = x;
+	// }
+	// }
 
-    // public void setX(float x) {
-    // if (x > 0) {
-    // this.x = x;
-    // }
-    // }
+	// public void setY(float y) {
+	// if (y > 0) {
+	// this.y = y;
+	// }
+	// }
 
-    public float getX() {
-        return x;
-    }
+	public Vec2 getV() {
+		return this.v;
+	}
 
-    // public void setY(float y) {
-    // if (y > 0) {
-    // this.y = y;
-    // }
-    // }
+	public void setV(float x, float y) {
+		this.v.set(x, y);
+		// System.out.println(TAG + " set V :");
+	}
 
-    public float getY() {
-        return this.y;
-    }
+	public void setAOI(float width, float height) {
+		this.halfWidth = width / 2;
+		this.halfHieght = height / 2;
+	}
 
-    public Vec2 getV() {
-        return this.v;
-    }
+	public float getAOIWidth() {
+		return this.halfWidth;
+	}
 
-    public void setV(float x, float y) {
-        this.v.set(x, y);
-        // System.out.println(TAG + " set V :");
-    }
+	public float getAOIHeight() {
+		return this.halfHieght;
+	}
 
-    public long getUserID() {
-        return this.userID;
-    }
+	public long getUserID() {
+		return userID;
+	}
 
-    public void setAOI(float width, float height) {
-        this.halfWidth = width / 2;
-        this.halfHieght = height / 2;
-    }
+	public void setUserID(long userId) {
+		this.userID = userId;
+	}
 
-    public float getAOIWidth() {
-        return this.halfWidth;
-    }
+	public ClientEvent getClientEvent() {
+		return clientEvent;
+	}
 
-    public float getAOIHeight() {
-        return this.halfHieght;
-    }
+	public void setClientEvent(ClientEvent clientEvent) {
+		this.clientEvent = clientEvent;
+	}
+
 }

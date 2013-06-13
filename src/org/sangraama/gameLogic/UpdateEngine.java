@@ -1,94 +1,96 @@
 package org.sangraama.gameLogic;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.sangraama.asserts.Player;
 import org.sangraama.asserts.SangraamaMap;
+import org.sangraama.controller.CommunicationHandler;
 import org.sangraama.controller.clientprotocol.PlayerDelta;
 
 public enum UpdateEngine implements Runnable {
-    INSTANCE;
-    // Debug
-    private String TAG = "Update Engine :";
+	INSTANCE;
+	// Debug
+	private String TAG = "Update Engine :";
 
-    private SangraamaMap sangraamaMap = null;
-    private ArrayList<Player> playerList = null; // don't modify;read only
-    private Map<Long, PlayerDelta> playerDelta = null;
-    private float[][] locations = null;// store x,y and ID
-    private boolean execute = true;
-    private boolean isUpdate = false;
+	private SangraamaMap sangraamaMap;
+	private List<Player> playerList; // don't modify;read only
+	private Map<Long, PlayerDelta> playerDelta;
+	private float[][] locations;// store x,y and ID
+	private boolean execute = true;
+	private boolean isUpdate;
+	private CommunicationHandler communicationHandler;
 
-    UpdateEngine() {
-        System.out.println(TAG + "Init GameEngine...");
-        this.playerList = new ArrayList<Player>();
-        // this.locations = new float[100][3];
-        this.sangraamaMap = SangraamaMap.INSTANCE;
-    }
+	UpdateEngine() {
+		System.out.println(TAG + "Init GameEngine...");
+		communicationHandler = new CommunicationHandler();
+		this.playerList = new ArrayList<Player>();
+		// this.locations = new float[100][3];
+		this.sangraamaMap = SangraamaMap.INSTANCE;
+	}
 
-    public boolean isUpdateVal() {
-        return this.isUpdate;
-    }
+	public boolean isUpdateVal() {
+		return this.isUpdate;
+	}
 
-    private boolean setIsUpdate(boolean isUpdate) {
-        return this.isUpdate = isUpdate;
-    }
+	private boolean setIsUpdate(boolean isUpdate) {
+		return this.isUpdate = isUpdate;
+	}
 
-    public boolean setPlayerList(ArrayList<Player> playerList) {
-        this.playerList = playerList;
-        return this.setIsUpdate(true);
-    }
+	public boolean setPlayerList(Collection<Player> playerList) {
+		this.playerList = (List<Player>) playerList;
+		return this.setIsUpdate(true);
+	}
 
-    @Override
-    public void run() {
-        while (this.execute) {
-            if (this.isUpdateVal()) {
-                this.pushUpdate();
-            }
-        }
-    }
+	@Override
+	public void run() {
+		while (this.execute) {
+			if (this.isUpdateVal()) {
+				this.pushUpdate();
+			}
+		}
+	}
 
-    public void pushUpdate() {
-        playerDelta = new HashMap<Long, PlayerDelta>();
-        //System.out.println(TAG + "delta list length :" + playerDelta.size());
-        for (Player player : playerList) {
-             //System.out.println(TAG + player.getUserID() +
-             //" Sending player updates");
-            playerDelta.put(player.getUserID(), player.getPlayerDelta());
-        }
-        //System.out.println(TAG + "delta list length :" + playerDelta.size());
-        for (Player player : playerList) {
-            player.sendUpdate(getAreaOfInterest(player));
-        }
-        this.isUpdate = false;
-    }
+	public void pushUpdate() {
+		playerDelta = new HashMap<Long, PlayerDelta>();
+		// System.out.println(TAG + "delta list length :" + playerDelta.size());
+		for (Player player : playerList) {
+			// System.out.println(TAG + player.getUserID() +
+			// " Sending player updates");
+			playerDelta.put(player.getUserID(), player.getPlayerDelta());
+		}
+		// System.out.println(TAG + "delta list length :" + playerDelta.size());
 
-    /**
-     * This method can replace with region query in 4.14 box2D manual
-     * 
-     * @param player
-     * @return ArrayList<PlayerDelta>
-     */
-    private ArrayList<PlayerDelta> getAreaOfInterest(Player p) {
-        ArrayList<PlayerDelta> delta = new ArrayList<PlayerDelta>();
-        // Add players own details
+		this.isUpdate = false;
+	}
 
-        // going through all players and check their locations
-        // inefficient
-        for (Player player : playerList) {
-            if (p.getX() - p.getAOIWidth() <= player.getX()
-                    && player.getX() <= p.getX() + p.getAOIWidth()
-                    && p.getY() - p.getAOIHeight() <= player.getY()
-                    && player.getY() <= p.getY() + p.getAOIHeight()) {
-                delta.add(this.playerDelta.get(player.getUserID()));
-            }
-        }
+	/**
+	 * This method can replace with region query in 4.14 box2D manual
+	 * 
+	 * @param player
+	 * @return ArrayList<PlayerDelta>
+	 */
+	private List<PlayerDelta> getAreaOfInterest(Player p) {
+		List<PlayerDelta> delta = new ArrayList<PlayerDelta>();
+		// Add players own details
 
-        return delta;
-    }
+		// going through all players and check their locations
+		// inefficient
+		/*
+		 * for (Player player : playerList) { if (p.getX() - p.getAOIWidth() <=
+		 * player.getX() && player.getX() <= p.getX() + p.getAOIWidth() &&
+		 * p.getY() - p.getAOIHeight() <= player.getY() && player.getY() <=
+		 * p.getY() + p.getAOIHeight()) {
+		 * delta.add(this.playerDelta.get(player.getUserID())); } }
+		 */
 
-    public boolean stopUpdateEngine() {
-        return this.execute = false;
-    }
+		return delta;
+	}
+
+	public boolean stopUpdateEngine() {
+		return this.execute = false;
+	}
 }
