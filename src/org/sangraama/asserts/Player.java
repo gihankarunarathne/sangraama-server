@@ -27,6 +27,7 @@ public class Player {
 	private GameEngine gameEngine;
 	private SangraamaMap sangraamaMap;
 	private ClientEvent clientEvent;
+	private float angle;
 	// WebSocket Connection
 	// private WebSocketConnection con;
 	private boolean isUpdate;
@@ -84,7 +85,8 @@ public class Player {
 		// this.delta = new PlayerDelta(this.body.getPosition().x - this.x,
 		// this.body.getPosition().y - this.y, this.userID);
 		this.delta = new PlayerDelta(this.body.getPosition().x,
-				this.body.getPosition().y, this.clientEvent.getUserID());
+				this.body.getPosition().y, this.body.getAngle(),
+				this.clientEvent.getUserID());
 		// this.x = this.body.getPosition().x;
 		// this.y = this.body.getPosition().y;
 
@@ -106,6 +108,7 @@ public class Player {
 
 	public void applyUpdate() {
 		this.body.setLinearVelocity(this.getV());
+		this.body.setTransform(body.getPosition(), this.getAngle());
 	}
 
 	private boolean isInsideMap(float x, float y) {
@@ -213,6 +216,29 @@ public class Player {
 
 	public void setClientEvent(ClientEvent clientEvent) {
 		this.clientEvent = clientEvent;
+	}
+
+	public float getAngle() {
+		return angle;
+	}
+
+	public void setAngle(ClientEvent clientEvent) {
+		float angle = body.getAngle();
+		float v_x = clientEvent.getV_x();
+		float v_y = clientEvent.getV_y();
+		float v_a = clientEvent.getV_a();
+		if (v_x == 1) {
+			angle = 0;
+		} else if (v_x == -1) {
+			angle = 180;
+		}
+		if (v_y == 1) {
+			angle = 90;
+		} else if (v_y == -1) {
+			angle = 270;
+		}
+		angle += v_a;
+		this.angle = angle;
 	}
 
 }

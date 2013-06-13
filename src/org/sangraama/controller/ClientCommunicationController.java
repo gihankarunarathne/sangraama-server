@@ -50,12 +50,14 @@ public class ClientCommunicationController extends WebSocketServer {
 			if (GameEngine.INSTANCE.getPlayerList().get(webSocket) == null) {
 				Player player = new Player(clientEvent, webSocket);
 				player.setV(clientEvent.getV_x(), clientEvent.getV_y());
+				player.setAngle(clientEvent);
 				GameEngine.INSTANCE.getPlayerList().put(webSocket, player);
 
 			} else {
 				Player player = GameEngine.INSTANCE.getPlayerList().get(
 						webSocket);
 				player.setV(clientEvent.getV_x(), clientEvent.getV_y());
+				player.setAngle(clientEvent);
 				player.setClientEvent(clientEvent);
 			}
 		}
