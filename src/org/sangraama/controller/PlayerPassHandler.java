@@ -14,10 +14,10 @@ import org.sangraama.thrift.client.ThriftClient;
 public enum PlayerPassHandler {
     INSTANCE;
     private static final String TAG = "PlayerPassHandler :";
-    private ArrayList<Player> passPlayerList = null;
-    private boolean isPass = false;
-    private ServerHandler sHandler = null;
-    private GameEngine gameEngine = null;
+    private ArrayList<Player> passPlayerList;
+    private boolean isPass;
+    private ServerHandler sHandler;
+    private GameEngine gameEngine;
 
     private PlayerPassHandler() {
         passPlayerList = new ArrayList<Player>();
@@ -28,11 +28,18 @@ public enum PlayerPassHandler {
     public void run() {
 
         if (this.isPass) {
-            System.out.println(TAG + " is pass true");
+            // System.out.println(TAG + " is pass true");
             for (Player player : passPlayerList) {
-                callThriftServer(player);
+                /*
+                 * Pass player information into another server using Thrift. This technique removed
+                 * by introducing a new concept of client is responsible for handling and connecting
+                 * to other servers. Security issue of attacking by other players is avoid by
+                 * assigning messages which are passed between players and decentralized servers.
+                 */
+                // callThriftServer(player);
+
                 passNewConnectionInfo(player);
-                this.gameEngine.addToRemovePlayerQueue(player);
+                // this.gameEngine.addToRemovePlayerQueue(player);
             }
             isPass = false;
             this.passPlayerList.clear();
@@ -45,8 +52,8 @@ public enum PlayerPassHandler {
         ServerLocation serverLoc = sHandler.getThriftServerLocation(player.getX(), player.getY());
 
         tPlayer.id = player.getUserID();
-        tPlayer.x = (int)(player.getX()+SangraamaMap.INSTANCE.getOriginX());
-        tPlayer.y = (int)(player.getY()+SangraamaMap.INSTANCE.getOriginY());
+        tPlayer.x = (int) (player.getX() + SangraamaMap.INSTANCE.getOriginX());
+        tPlayer.y = (int) (player.getY() + SangraamaMap.INSTANCE.getOriginY());
         tPlayer.v_x = player.getV().x;
         tPlayer.v_y = player.getV().y;
         if (serverLoc != null) {
@@ -65,11 +72,15 @@ public enum PlayerPassHandler {
 
     private void passNewConnectionInfo(Player player) {
         ServerLocation serverLoc = this.sHandler.getServerLocation(player.getX(), player.getY());
-        ClientTransferReq transferReq = new ClientTransferReq(player.getUserID(),
-                serverLoc.getServerURL(), serverLoc.getServerPort());
-        player.sendNewConnection(transferReq);
-        System.out.println(TAG + " Sending new connection information. server URL:"
-                + serverLoc.getServerURL() + " serverPort:" + serverLoc.getServerPort());
+
+        if (serverLoc != null) {
+            ClientTransferReq transferReq = new ClientTransferReq(player.getUserID(),
+                    serverLoc.getServerURL(), serverLoc.getServerPort(), serverLoc.getDirectory());
+
+            player.sendNewConnection(transferReq);
+            System.out.println(TAG + " Sending new connection information. server URL:"
+                    + serverLoc.getServerURL() + " serverPort:" + serverLoc.getServerPort());
+        }
     }
 
 }
