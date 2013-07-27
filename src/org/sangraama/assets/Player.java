@@ -1,4 +1,4 @@
-package org.sangraama.asserts;
+package org.sangraama.assets;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +15,7 @@ import org.sangraama.controller.WebSocketConnection;
 import org.sangraama.controller.clientprotocol.ClientTransferReq;
 import org.sangraama.common.Constants;
 import org.sangraama.controller.clientprotocol.PlayerDelta;
-import org.sangraama.coordination.TileCoordinator;
+import org.sangraama.coordination.staticPartition.TileCoordinator;
 import org.sangraama.gameLogic.GameEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,6 +54,10 @@ public class Player {
     private List<Bullet> newBulletList;
     private List<Bullet> bulletList;
 
+    // player current subtile information
+    float currentSubTileOriginX;
+    float currentSubTileOriginY;
+
     public boolean isUpdate() {
         return this.isUpdate;
     }
@@ -72,10 +76,12 @@ public class Player {
         this.userID = userID;
         this.x = x;
         this.y = y;
+        this.sangraamaMap = SangraamaMap.INSTANCE;
+        currentSubTileOriginX = x - (x % sangraamaMap.getSubTileWidth());
+        currentSubTileOriginY = y - (y % sangraamaMap.getSubTileHeight());
         this.con = con;
         this.bodyDef = this.createBodyDef();
         this.fixtureDef = createFixtureDef();
-        this.sangraamaMap = SangraamaMap.INSTANCE;
         this.gameEngine = GameEngine.INSTANCE;
         this.gameEngine.addToPlayerQueue(this);
         this.newBulletList = new ArrayList<Bullet>();
@@ -115,7 +121,7 @@ public class Player {
 
         // isUpdate = true;
         // }
-        if(!isInsideServerSubTile(x, y)){
+        if (!isInsideServerSubTile(x, y)) {
             PlayerPassHandler.INSTANCE.setPassPlayer(this);
         }
         return this.delta;
@@ -147,10 +153,18 @@ public class Player {
 
     private boolean isInsideServerSubTile(float x, float y) {
         boolean insideServerSubTile = true;
-        if (!sangraamaMap.getHost().equals(TileCoordinator.INSTANCE.getSubTileHost(x, y))) {
-            insideServerSubTile = false;
-            System.out.println(TAG + "player is not inside a subtile of " + sangraamaMap.getHost());
+        float subTileOriX = x - (x % sangraamaMap.getSubTileWidth());
+        float subTileOriY = y - (y % sangraamaMap.getSubTileHeight());
+        if (currentSubTileOriginX != subTileOriX && currentSubTileOriginY != subTileOriY) {
+            currentSubTileOriginX = subTileOriX;
+            currentSubTileOriginY = subTileOriY;
+            if (!sangraamaMap.getHost().equals(TileCoordinator.INSTANCE.getSubTileHost(x, y))) {
+                insideServerSubTile = false;
+                System.out.println(TAG + "player is not inside a subtile of "
+                        + sangraamaMap.getHost());
+            }
         }
+
         return insideServerSubTile;
     }
 
