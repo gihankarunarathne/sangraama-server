@@ -54,7 +54,7 @@ public class Player {
     private List<Bullet> newBulletList;
     private List<Bullet> bulletList;
 
-    // player current subtile information
+    // player current sub-tile information
     float currentSubTileOriginX;
     float currentSubTileOriginY;
 
@@ -77,6 +77,10 @@ public class Player {
         this.x = x;
         this.y = y;
         this.sangraamaMap = SangraamaMap.INSTANCE;
+        /*
+         * Note: this should replace by sangraama map method. Player shouldn't responsible for
+         * Deciding it's sub-tile
+         */
         this.currentSubTileOriginX = x - (x % sangraamaMap.getSubTileWidth());
         this.currentSubTileOriginY = y - (y % sangraamaMap.getSubTileHeight());
         this.con = con;
@@ -121,8 +125,9 @@ public class Player {
 
         // isUpdate = true;
         // }
-        if (!isInsideServerSubTile(x, y)) {
+        if (!isInsideServerSubTile(this.x, this.y)) {
             PlayerPassHandler.INSTANCE.setPassPlayer(this);
+            System.out.println(TAG + "outside of the subtile detected");
         }
         return this.delta;
     }
@@ -173,9 +178,12 @@ public class Player {
         boolean insideServerSubTile = true;
         float subTileOriX = x - (x % sangraamaMap.getSubTileWidth());
         float subTileOriY = y - (y % sangraamaMap.getSubTileHeight());
-        if (this.currentSubTileOriginX != subTileOriX || currentSubTileOriginY != subTileOriY) {
-            this.currentSubTileOriginX = subTileOriX;
-            this.currentSubTileOriginY = subTileOriY;
+//        System.out.println(TAG + currentSubTileOriginX + ":" + currentSubTileOriginY + " with "
+//                + subTileOriX + ":" + subTileOriY);
+        if (currentSubTileOriginX != subTileOriX || currentSubTileOriginY != subTileOriY) {
+            currentSubTileOriginX = subTileOriX;
+            currentSubTileOriginY = subTileOriY;
+            //System.out.println(TAG + "sub tile coord are not matching...");
             if (!sangraamaMap.getHost().equals(TileCoordinator.INSTANCE.getSubTileHost(x, y))) {
                 insideServerSubTile = false;
                 System.out.println(TAG + "player is not inside a subtile of "
@@ -187,7 +195,10 @@ public class Player {
     }
 
     /**
-     * Request for client's Area of Interest around player
+     * Request for client's Area of Interest around player. When player wants to fulfill it's Area
+     * of Interest, it will ask for the updates of that area. This method checked in following
+     * sequence, 1) check on own sub-tile 2) check whether location is inside current 3) check for
+     * the server which own that location and send connection tag
      * 
      * @param x
      *            x coordination of interest location
@@ -195,8 +206,8 @@ public class Player {
      *            y coordination of interest location
      */
     public void reqInterestIn(float x, float y) {
-        if (!isInsideMap(x, y)) {
-            PlayerPassHandler.INSTANCE.setPassPlayer(this);
+        if (!isInsideServerSubTile(x, y)) {
+            PlayerPassHandler.INSTANCE.setPassConnection(this);
         }
     }
 
